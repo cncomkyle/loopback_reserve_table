@@ -1,6 +1,7 @@
 // Uncomment these imports to begin using these cool features!
 
 // import {inject} from '@loopback/core';
+import {authenticate} from '@loopback/authentication';
 import {inject} from '@loopback/core';
 import {LoggingBindings, logInvocation, WinstonLogger} from '@loopback/logging';
 import {get, getModelSchemaRef, HttpErrors, param, post, requestBody} from '@loopback/rest';
@@ -60,21 +61,37 @@ export class ReserveController {
   @get('/getReservations')
   @logInvocation()
   // @authenticate('jwt')
-  async getReservations(@param.query.string('userId') userId: string,) {
+  async getReservations(@param.query.string('userId') userId: string,
+    @param.query.string('userName') userName: string,
+    @param.query.string('mobile') mobile: string,
+    @param.query.string('reserve_date') reserve_date: string,) {
     // Use the winston logger explicitly
     this.logger.log('info', `${userId}`);
 
+    let filter = {} as any;
+
     if (userId && userId.trim().length) {
-      const result = await reservationsModel.find({userId: {$eq: userId}}, {consistency: 2});
-      return JSON.stringify(result.rows, null, 2);
-    } else {
-      const result = await reservationsModel.find({}, {consistency: 2});
-      return JSON.stringify(result.rows, null, 2);
+      filter.userId = {$eq: userId};
     }
+
+    if (userName && userName.trim().length) {
+      filter.userName = {$eq: userName};
+    }
+
+    if (mobile && mobile.trim().length) {
+      filter.mobile = {$eq: mobile};
+    }
+
+    if (reserve_date && reserve_date.trim().length) {
+      filter.reserve_date_time = {$like: reserve_date + '%'};
+    }
+
+    const result = await reservationsModel.find(filter, {consistency: 2, sort: {"reserve_date_time": 'DESC'}});
+    return JSON.stringify(result.rows, null, 2);
   }
 
   @post('/updateStatus')
-  // @authenticate('jwt')
+  @authenticate('jwt')
   async updateStatus(
     @requestBody({
       description: 'update reservation status',

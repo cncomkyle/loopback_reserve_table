@@ -3,7 +3,9 @@
 // import {inject} from '@loopback/core';
 import {get} from '@loopback/rest';
 
-import {Ottoman, Schema, set} from "ottoman";
+import {Bucket, Ottoman, Schema, set} from "ottoman";
+
+import {QueryResult} from 'couchbase';
 
 // Setting Ottoman in debuggin mode
 set('DEBUG', true);
@@ -167,6 +169,15 @@ export class HelloController {
     })
     console.log('Result:', JSON.stringify(result.rows, null, 2));
 
+    const bucket: Bucket = ottoman.cluster.bucket("hilton_chbin")
+
+    const queryResult: QueryResult = await bucket
+      .scope('chbin_scope')
+      .query('SELECT size, tableNo, meta().id FROM tables')
+
+    queryResult.rows.forEach((row) => {
+      console.log(row)
+    })
 
     // await tableModel.removeMany({});
     await ottoman.close();

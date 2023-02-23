@@ -9,7 +9,9 @@ import {addMinutes, format, parse} from 'date-fns';
 import {ReserveRequest} from '../models';
 import reservationsModel from '../models/reservations.model';
 
-import {DocumentNotFoundError} from 'ottoman';
+import {QueryResult} from 'couchbase';
+import {Bucket, DocumentNotFoundError} from 'ottoman';
+import {ottoman} from "../ottoman-global-config";
 
 
 interface updateReservationStatus {
@@ -45,9 +47,20 @@ export class ReserveController {
     if (checkRlt) {
       return {status: 201, message: "Same reservation exist"}
     }
+    // check wheter matched size table available
+    const newTableInfo = await this.getMatchedTable(
+      newReservation.size, newReservation.reserve_date_time);
 
+    this.logger.info(newTableInfo)
+    if (newTableInfo && !newTableInfo.tableId) {
+      return {status: 202, message: "Matched table unavaible now!"}
+    }
+
+    // save new reservation
     const reserveDate = parse(newReservation.reserve_date_time, 'yyyy/MM/dd HH:mm:ss', new Date());
     const newReservationModel = new reservationsModel({
+      tableId: newTableInfo.tableId,
+      tableNo: newTableInfo.tableNo,
       size: newReservation.size,
       userId: newReservation.userId,
       userName: newReservation.userName,
@@ -63,6 +76,38 @@ export class ReserveController {
     await newReservationModel.save();
     // this.logger.log('info', `reservationsModel  is ${reservation}`);
     return {status: 200, message: "create new reservations"}
+  }
+
+  async getMatchedTable(
+    size: number, reserve_date_time: string): Promise<{tableId: string, tableNo: string}> {
+
+    try {
+      const bucket: Bucket = ottoman.cluster.bucket("hilton_chbin")
+      const queryResult: QueryResult = await bucket
+        .scope('chbin_scope')
+        .query(`select id
+                        ,tableNo
+                  from tables
+                 where size = $SIZE
+                  and id not in (
+                    select raw tableId
+                      FROM reservations
+                     where status in ['booked', 'confirmed']
+                      and size = $SIZE
+                      and reserve_date_time = $DATETIME
+                      ) limit 1`,
+          {parameters: {SIZE: Number(size), DATETIME: reserve_date_time}},);
+
+      if (queryResult && queryResult.rows.length == 1) {
+        return {tableId: queryResult.rows[0].id, tableNo: queryResult.rows[0].tableNo};
+      }
+    } catch (error) {
+      this.logger.error(error)
+    }
+
+
+    return {tableId: "", tableNo: ""};
+
   }
 
   async checkExistReservation(

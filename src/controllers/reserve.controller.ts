@@ -35,8 +35,16 @@ export class ReserveController {
       },
     },
   }) newReservation: ReserveRequest,
-  ): Promise<String> {
+  ): Promise<{status: number, message: string}> {
     this.logger.log('info', `request json is ${JSON.stringify(newReservation, null, 2)}`);
+
+    // check whether exist one record with same username && Mobile && reserveDateTime
+    const checkRlt: boolean = await this.checkExistReservation(
+      newReservation.userName, newReservation.mobile, newReservation.reserve_date_time);
+
+    if (checkRlt) {
+      return {status: 201, message: "Same reservation exist"}
+    }
 
     const reserveDate = parse(newReservation.reserve_date_time, 'yyyy/MM/dd HH:mm:ss', new Date());
     const newReservationModel = new reservationsModel({
@@ -54,7 +62,31 @@ export class ReserveController {
 
     await newReservationModel.save();
     // this.logger.log('info', `reservationsModel  is ${reservation}`);
-    return "create new reservations"
+    return {status: 200, message: "create new reservations"}
+  }
+
+  async checkExistReservation(
+    userName: string,
+    mobile: string,
+    reserve_date_time: string,):
+    Promise<boolean> {
+    let filter = {} as any;
+    filter.userName = {$eq: userName};
+    filter.mobile = {$eq: mobile};
+    filter.reserve_date_time = {$eq: reserve_date_time};
+
+    try {
+      const result = await reservationsModel.findOne(filter, {consistency: 2});
+      if (result) {
+        return true;
+      }
+    } catch (error) {
+      this.logger.error(error);
+      return false;
+    }
+
+    return false;
+
   }
 
 

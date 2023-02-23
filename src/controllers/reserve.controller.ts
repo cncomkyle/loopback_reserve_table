@@ -118,6 +118,7 @@ export class ReserveController {
     let filter = {} as any;
     filter.userName = {$eq: userName};
     filter.mobile = {$eq: mobile};
+    filter.status = {$in: ['booked', 'confirmed']};
     filter.reserve_date_time = {$eq: reserve_date_time};
 
     try {
@@ -141,6 +142,7 @@ export class ReserveController {
   async getReservations(@param.query.string('userId') userId: string,
     @param.query.string('userName') userName: string,
     @param.query.string('mobile') mobile: string,
+    @param.query.string('status') status: string,
     @param.query.string('reserve_date') reserve_date: string,) {
     // Use the winston logger explicitly
     this.logger.log('info', `${userId}`);
@@ -153,6 +155,10 @@ export class ReserveController {
 
     if (userName && userName.trim().length) {
       filter.userName = {$eq: userName};
+    }
+
+    if (status && status.trim().length) {
+      filter.status = {$eq: status};
     }
 
     if (mobile && mobile.trim().length) {

@@ -1,8 +1,8 @@
 import {model, Schema} from 'ottoman';
 
 const tablesSchema = new Schema({
-  tableNo: String,
-  size: Number,
+  tableNo: {type: String, required: true},
+  size: {type:Number, required: true},
   id: String,
   type: String,
 });

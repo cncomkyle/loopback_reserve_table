@@ -19,6 +19,8 @@ import {ServiceMixin} from '@loopback/service-proxy';
 import path from 'path';
 import {MySequence} from './sequence';
 
+import {GraphQLBindings, GraphQLComponent} from '@loopback/graphql';
+
 export {ApplicationConfig};
 
 
@@ -57,6 +59,13 @@ export class StarterApplication extends BootMixin(
     // Mount jwt component
     this.component(JWTAuthenticationComponent);
 
+    this.component(GraphQLComponent);
+    this.configure(GraphQLBindings.GRAPHQL_SERVER).to({
+      asMiddlewareOnly: true,
+    });
+    const server = this.getSync(GraphQLBindings.GRAPHQL_SERVER);
+    this.expressMiddleware('middleware.express.GraphQL', server.expressApp);
+
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here
@@ -65,6 +74,12 @@ export class StarterApplication extends BootMixin(
         // Customize ControllerBooter Conventions here
         dirs: ['controllers'],
         extensions: ['.controller.js'],
+        nested: true,
+      },
+      graphqlResolvers: {
+        // Customize ControllerBooter Conventions here
+        dirs: ['graphql-resolvers'],
+        extensions: ['.js'],
         nested: true,
       },
     };

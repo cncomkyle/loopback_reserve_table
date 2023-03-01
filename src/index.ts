@@ -6,27 +6,29 @@ import settingsModel from './models/settings.model';
 import tableModel from './models/tables.model';
 import usersModel from './models/users.model';
 
+import {GraphQLServerOptions} from '@loopback/graphql';
+
 
 
 export * from './application';
 
 async function initDBData(): Promise<void> {
   console.log("Begin initDBData")
-
+  let idCount = 1;
   await tableModel.removeMany();
   // init tables
   for (var i = 1; i <= 5; i++) {
-    const newTable = new tableModel({tableNo: '2_' + i, size: 2});
+    const newTable = new tableModel({tableNo: '2_' + i, size: 2, id: idCount++ + ""});
     await newTable.save();
   }
 
   for (var i = 1; i <= 10; i++) {
-    const newTable = new tableModel({tableNo: '4_' + i, size: 4});
+    const newTable = new tableModel({tableNo: '4_' + i, size: 4, id: idCount++ + ""});
     await newTable.save();
   }
 
   for (var i = 1; i <= 2; i++) {
-    const newTable = new tableModel({tableNo: '10_' + i, size: 10});
+    const newTable = new tableModel({tableNo: '10_' + i, size: 10, id: idCount++ + ""});
     await newTable.save();
   }
 
@@ -84,6 +86,9 @@ export async function main(options: ApplicationConfig = {}) {
 }
 
 if (require.main === module) {
+  const graphqlCfg: GraphQLServerOptions = {
+    asMiddlewareOnly: true,
+  };
   // Run the application
   const config = {
     rest: {
@@ -100,6 +105,7 @@ if (require.main === module) {
         setServersFromRequest: true,
       },
     },
+    graphql: graphqlCfg,
   };
   main(config).catch(err => {
     console.error('Cannot start the application.', err);
